@@ -115,8 +115,8 @@ def getDateString():
 ####################################################################################
 def buildCrontabLine(directory, backup_directory):
     print("> buildCrontabLine")
-    # TODO: get script path
-    return "00 13,00 * * * /home/g179948/tools/./cron-backup.py -d {d} -b {b} -x".format(d=directory, b=backup_directory)
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    return "00 13,00 * * * {s}/./cron-backup.py -d {d} -b {b} -x".format(s=script_path, d=directory, b=backup_directory)
 
 
 # ADD CRONTAB LINE
@@ -181,6 +181,8 @@ if __name__ == "__main__":
     if action == 'execute':
         print("> action execute")
 
+        do_backup = False
+
         backup_base_name = directory.replace("/","_")
 
         # find last backup
@@ -192,20 +194,27 @@ if __name__ == "__main__":
             if backup_base_name in f:
                 last_backup = f
                 break
+        #
 
-        print("last backup found: {}".format(last_backup))
+        if last_backup is None:
+            print("no backup found")
+            do_backup = True
+        else:
+            print("last backup found: {}".format(last_backup))
 
-        # search for diff between last backup and dir
-        dcmp = dircmp(last_backup, directory) 
-        
-        if dcmp.left_only or dcmp.right_only or dcmp.diff_files or dcmp.funny_files:
-            print("diff founds => do backup")
+            # search for diff between last backup and dir
+            dcmp = dircmp(last_backup, directory) 
+            
+            if dcmp.left_only or dcmp.right_only or dcmp.diff_files or dcmp.funny_files:
+                print("diff founds")
+                do_backup = True
+            else:
+                print("no diff founds")
 
-            # do backup
+        if do_backup:
+            print("-> do backup")
             date = getDateString()
             runCmd("sudo cp -rf {d} {b}/{n}_{da}".format(d=directory, b=backup_directory, n=backup_base_name, da=date))
-        else:
-            print("no diff founds")
 
         exit(0)
 
